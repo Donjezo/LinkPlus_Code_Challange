@@ -1,8 +1,10 @@
 package com.banksystem.linkplus.service;
 
 import com.banksystem.linkplus.model.Account;
+import com.banksystem.linkplus.model.Bank;
 import com.banksystem.linkplus.model.Transaction;
 import com.banksystem.linkplus.repository.AccountRepository;
+import com.banksystem.linkplus.repository.BankRepository;
 import com.banksystem.linkplus.repository.TransactionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -19,6 +21,9 @@ public class AccountService {
 
     @Autowired
     private TransactionRepository transactionRepository;
+
+    @Autowired
+    private BankRepository bankRepository;
 
     public Account createAccount(String name, BigDecimal balance) {
         Account account = new Account(name, balance);
@@ -40,50 +45,66 @@ public class AccountService {
         return accountRepository.findById(id);
     }
 
-    public Account deposit(Long accountId, BigDecimal amount) throws Exception {
+   /* public Account deposit(Long accountId, BigDecimal amount) throws Exception {
         Account account = accountRepository.findById(accountId)
                 .orElseThrow(() -> new Exception("Account not found"));
         account.setBalance(account.getBalance().add(amount));
         accountRepository.save(account);
 
-        // Record the transaction
+        // pjesa e transaksioneve
         Transaction transaction = new Transaction(amount, accountId, accountId, "Deposit");
         transactionRepository.save(transaction);
 
         return account;
+    }*/
+
+    public Account deposit(Long accountId, BigDecimal amount) throws Exception {
+        Account account = accountRepository.findById(accountId).orElseThrow(() -> new Exception("Account not found"));
+        account.setBalance(account.getBalance().add(amount));
+        return accountRepository.save(account);
     }
 
     public Account withdraw(Long accountId, BigDecimal amount) throws Exception {
         Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new Exception("Account not found"));
+                .orElseThrow(() -> new Exception("LLogaria nuk u gjend"));
         if (account.getBalance().compareTo(amount) < 0) {
             throw new Exception("Not enough funds");
         }
         account.setBalance(account.getBalance().subtract(amount));
         accountRepository.save(account);
 
-        // Record the transaction
+        // transaksionet
         Transaction transaction = new Transaction(amount, accountId, accountId, "Withdraw");
         transactionRepository.save(transaction);
 
         return account;
     }
 
-    public Transaction transfer(Long originatingAccountId, Long resultingAccountId, BigDecimal amount) throws Exception {
+    public Transaction transfer(Long bankId, Long originatingAccountId, Long resultingAccountId, BigDecimal amount) throws Exception {
         Account originatingAccount = accountRepository.findById(originatingAccountId)
                 .orElseThrow(() -> new Exception("Originating account not found"));
         Account resultingAccount = accountRepository.findById(resultingAccountId)
                 .orElseThrow(() -> new Exception("Resulting account not found"));
 
-        if (originatingAccount.getBalance().compareTo(amount) < 0) {
+        Bank bank = bankRepository.findById(bankId)
+                .orElseThrow(() -> new Exception("Bank not found"));
+
+        BigDecimal fee = bank.getTransactionFlatFee().add(amount.multiply(bank.getTransactionPercentFee().divide(new BigDecimal(100))));
+        BigDecimal totalAmount = amount.add(fee);
+
+        if (originatingAccount.getBalance().compareTo(totalAmount) < 0) {
             throw new Exception("Not enough funds");
         }
 
-        originatingAccount.setBalance(originatingAccount.getBalance().subtract(amount));
+        originatingAccount.setBalance(originatingAccount.getBalance().subtract(totalAmount));
         resultingAccount.setBalance(resultingAccount.getBalance().add(amount));
 
         accountRepository.save(originatingAccount);
         accountRepository.save(resultingAccount);
+
+        bank.setTotalTransactionFee(bank.getTotalTransactionFee().add(fee));
+        bank.setTotalTransferAmount(bank.getTotalTransferAmount().add(amount));
+        bankRepository.save(bank);
 
         // Record the transaction
         Transaction transaction = new Transaction(amount, originatingAccountId, resultingAccountId, "Transfer");

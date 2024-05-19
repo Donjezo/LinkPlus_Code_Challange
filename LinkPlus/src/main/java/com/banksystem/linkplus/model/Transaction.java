@@ -1,16 +1,16 @@
 package com.banksystem.linkplus.model;
-
+import lombok.Data;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import lombok.Data;
+
 
 import java.math.BigDecimal;
 
 @Entity
 @Data
-public class Transaction {
+public class Transaction extends Account{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -19,10 +19,9 @@ public class Transaction {
     private Long resultingAccountId;
     private String reason;
 
-    // Default constructor for JPA
+
     public Transaction() {}
 
-    // Constructor
     public Transaction(BigDecimal amount, Long originatingAccountId, Long resultingAccountId, String reason) {
         this.amount = amount;
         this.originatingAccountId = originatingAccountId;

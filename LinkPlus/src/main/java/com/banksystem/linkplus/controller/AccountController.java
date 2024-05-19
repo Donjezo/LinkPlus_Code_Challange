@@ -1,5 +1,6 @@
 package com.banksystem.linkplus.controller;
 
+import com.banksystem.linkplus.dto.DepositWithdrawRequest;
 import com.banksystem.linkplus.model.Account;
 import com.banksystem.linkplus.model.Transaction;
 import com.banksystem.linkplus.service.AccountService;
@@ -44,29 +45,31 @@ public class AccountController {
     }
 
     @PostMapping("/{accountId}/deposit")
-    public ResponseEntity<Account> deposit(@PathVariable Long accountId, @RequestParam BigDecimal amount) {
+    public ResponseEntity<Account> deposit(@PathVariable Long accountId, @RequestBody DepositWithdrawRequest request) {
         try {
+            BigDecimal amount = request.getAmount();
             return ResponseEntity.ok(accountService.deposit(accountId, amount));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(null);
         }
     }
-
     @PostMapping("/{accountId}/withdraw")
-    public ResponseEntity<Account> withdraw(@PathVariable Long accountId, @RequestParam BigDecimal amount) {
+    public ResponseEntity<Account> withdraw(@PathVariable Long accountId,  @RequestBody DepositWithdrawRequest request) {
         try {
+            BigDecimal amount = request.getAmount();
             return ResponseEntity.ok(accountService.withdraw(accountId, amount));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(null);
         }
     }
 
-    @PostMapping("/{originatingAccountId}/transfer/{resultingAccountId}")
-    public ResponseEntity<Transaction> transfer(@PathVariable Long originatingAccountId,
-                                                @PathVariable Long resultingAccountId,
-                                                @RequestParam BigDecimal amount) {
+    @PostMapping("/{bankId}/transfer")
+    public ResponseEntity<Transaction> transfer(@RequestBody Transaction transaction, @PathVariable long bankId) {
         try {
-            return ResponseEntity.ok(accountService.transfer(originatingAccountId, resultingAccountId, amount));
+            return ResponseEntity.ok(accountService.transfer(bankId,
+                    transaction.getOriginatingAccountId(),
+                    transaction.getResultingAccountId(),
+                    transaction.getAmount()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(null);
         }
